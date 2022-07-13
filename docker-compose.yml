@@ -5,6 +5,7 @@ services:
     env_file:
       - ./master/mysql_master.env
     container_name: "mysql_master"
+    hostname: mysql
     restart: "no"
     ports:
       - 4406:3306
@@ -12,12 +13,14 @@ services:
       - ./master/conf/mysql.conf.cnf:/etc/mysql/conf.d/mysql.conf.cnf
       - ./master/data:/var/lib/mysql
     networks:
-      - overlay
+      app_net:
+        ipv4_address: 111.0.0.10
 
   mysql_slave:
     image: mysql:5.7
     env_file:
       - ./slave/mysql_slave.env
+    hostname: mysql-slave
     container_name: "mysql_slave"
     restart: "no"
     ports:
@@ -28,8 +31,41 @@ services:
       - ./slave/conf/mysql.conf.cnf:/etc/mysql/conf.d/mysql.conf.cnf
       - ./slave/data:/var/lib/mysql
     networks:
-      - overlay
+      app_net:
+        ipv4_address: 111.0.0.20
+
+  mysql_second:
+    image: mysql:5.7
+    env_file:
+      - ./second/mysql_slave.env
+    hostname: mysql-second
+    container_name: "mysql_second"
+    restart: "no"
+    ports:
+      - 6606:3306
+    depends_on:
+      - mysql_master
+      - mysql_slave
+    volumes:
+      - ./second/conf/mysql.conf.cnf:/etc/mysql/conf.d/mysql.conf.cnf
+      - ./second/data:/var/lib/mysql
+    networks:
+      app_net:
+        ipv4_address: 111.0.0.30
+
+  php-fpm:
+    build:
+      context: .
+      dockerfile: php.Dockerfile
+    container_name: php-l18
+    volumes:
+      - ./public:/var/www/html
+    networks:
+      app_net:
 
 networks:
-  overlay:
-
+  app_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 111.0.0.0/24
